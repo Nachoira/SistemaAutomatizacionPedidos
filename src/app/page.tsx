@@ -49,8 +49,8 @@ const currency = new Intl.NumberFormat('es-AR', {
 });
 
 export default function ClientMenu({
-  barName = process.env.NEXT_PUBLIC_BAR_NAME || 'Nuestro Bar',
-  whatsappNumber = process.env.NEXT_PUBLIC_BAR_WHATSAPP || '5493865575938',
+  barName = process.env.NEXT_PUBLIC_BAR_NAME ,
+  whatsappNumber = process.env.NEXT_PUBLIC_BAR_WHATSAPP ,
 }: ClientMenuProps = {}) {
   const [products, setProducts] = useState<Product[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');

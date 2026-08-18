@@ -1,4 +1,10 @@
 import { Pool, PoolClient, QueryResultRow } from 'pg';
+import dns from 'dns';
+
+// Evita que Node intente direcciones IPv6 no alcanzables en redes que no
+// las soportan bien (común en Windows) — sin esto, cada conexión pierde
+// varios segundos probando IPv6 antes de caer a IPv4.
+dns.setDefaultResultOrder('ipv4first');
 
 // --- Singleton del pool ----------------------------------------------------
 // En desarrollo, Next.js recarga este módulo en cada cambio de archivo (HMR).
@@ -12,16 +18,22 @@ declare global {
 function createPool() {
   const connectionString = process.env.DATABASE_URL;
 
+  // Neon (y la mayoría de los Postgres administrados en la nube) requieren
+  // SSL. Un Postgres local instalado a mano normalmente no lo tiene
+  // configurado, y forzar SSL contra él tira "The server does not support
+  // SSL connections".
   const isLocal = connectionString?.includes('localhost') || connectionString?.includes('127.0.0.1');
 
   const pool = new Pool({
     connectionString,
     ssl: isLocal ? false : { rejectUnauthorized: false },
-    max: 10,
+    max: 10, // tope de conexiones por instancia — evita agotar el límite de Neon
     idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 5_000,
+    connectionTimeoutMillis: 10_000, // un poco más alto: Neon puede tardar en "despertar"
   });
 
+  // Sin este listener, un error en una conexión idle (Neon "duerme" en el
+  // plan free y corta conexiones) puede tirar abajo todo el proceso.
   pool.on('error', (err) => {
     console.error('Error inesperado en el pool de Postgres:', err);
   });
@@ -35,7 +47,10 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // --- Query simple ------------------------------------------------------
-export async function query<T extends QueryResultRow = any>(text: string, params?: any[]) {
+export async function query<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: any[]
+) {
   const start = Date.now();
   try {
     const result = await pool.query<T>(text, params);
@@ -53,8 +68,6 @@ export async function query<T extends QueryResultRow = any>(text: string, params
 // --- Transacciones -------------------------------------------------------
 // Necesario en cuanto una operación toque más de una tabla y deba ser
 // atómica — por ejemplo, crear un pedido Y descontar stock a la vez.
-// Si una falla, se revierte todo; no queda el pedido creado sin stock
-// descontado, o viceversa.
 export async function transaction<T>(
   callback: (client: PoolClient) => Promise<T>
 ): Promise<T> {
