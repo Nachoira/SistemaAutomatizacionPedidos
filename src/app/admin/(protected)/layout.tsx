@@ -45,30 +45,31 @@ export default function AdminProtectedLayout({ children }: { children: React.Rea
       className={`${display.variable} ${body.variable} min-h-screen bg-[var(--bg)] font-[family-name:var(--font-body)] text-[var(--text)]`}
     >
       <header className="border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-          <nav className="flex gap-1">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  pathname === item.href
-                    ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
-                    : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          <button
-            onClick={handleLogout}
-            className="text-sm font-medium text-[var(--text-muted)] transition-colors hover:text-[var(--danger)]"
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </header>
+  <div className="mx-auto max-w-5xl px-5 py-4">
+    <div className="flex flex-wrap items-center gap-2">
+      {NAV_ITEMS.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            pathname === item.href
+              ? 'bg-[var(--accent)] text-[var(--accent-contrast)]'
+              : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)]'
+          }`}
+        >
+          {item.label}
+        </Link>
+      ))}
+
+      <button
+        onClick={handleLogout}
+        className="ml-auto rounded-lg border border-[var(--danger)]/40 px-2.5 py-1 text-xs font-semibold text-[var(--danger)] transition-colors hover:bg-[var(--danger)]/10"
+      >
+        Cerrar sesión
+      </button>
+    </div>
+  </div>
+</header>
       <main className="mx-auto max-w-5xl px-5 py-8">{children}</main>
     </div>
   );
