@@ -1,8 +1,0 @@
-{
-  "name": "Pedidos Admin",
-  "short_name": "Pedidos Admin",
-  "start_url": "/admin",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#00B4D8"
-}

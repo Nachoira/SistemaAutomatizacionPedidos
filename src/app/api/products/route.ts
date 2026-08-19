@@ -50,7 +50,7 @@ export async function POST(req: Request) {
     }
 
     const result = await query<ProductRow>(
-      `INSERT INTO products (name, description, price, category, available)
+      `INSERT INTO products (image_url,name, description, price, category, available)
        VALUES ($1, $2, $3, $4, TRUE) RETURNING *`,
       [name.trim(), description || null, price, category || null]
     );
@@ -81,6 +81,11 @@ export async function PATCH(req: Request) {
     const fields: string[] = [];
     const values: unknown[] = [];
     let i = 1;
+
+    if (typeof body.image_url === 'string' || body.image_url === null) {
+  fields.push(`image_url = $${i++}`);
+  values.push(body.image_url);
+}
 
     if (typeof body.name === 'string' && body.name.trim()) {
       fields.push(`name = $${i++}`);

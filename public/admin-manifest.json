@@ -1,0 +1,12 @@
+{
+  "name": "La 22 Admin",
+  "short_name": "La 22 Admin",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00B4D8",
+  "icons": [
+    { "src": "/images/la22.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/images/la22.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

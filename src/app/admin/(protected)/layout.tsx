@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: '/admin', label: 'Pedidos' },
   { href: '/admin/clients', label: 'Clientes' },
   { href: '/admin/products', label: 'Productos' },
+  { href: '/admin/settings', label: 'Configuración' },
 ];
 
 const theme = {
