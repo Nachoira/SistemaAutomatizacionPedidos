@@ -169,33 +169,29 @@ export default function ProductsPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4 flex-1">
                     
-                    {/* --- COLUMNA FOTO MODIFICADA --- */}
                     <div className="relative w-20 h-20 flex-shrink-0 mx-auto sm:mx-0 group">
-                         {/* Muestra la foto actual (ya sea la que se está editando o la original) */}
-                        {editImageUrl || p.image_url ? (
-                            <img src={(editImageUrl || p.image_url) ?? ""} className="w-full h-full rounded-lg object-cover border border-neutral-200" />
-                        ) : (
-                            <div className="w-full h-full rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center">
-                                <span className="text-xs text-neutral-400">Sin foto</span>
-                            </div>
-                        )}
+    {(editingId === p.id ? editImageUrl : null) || p.image_url ? (
+        <img
+            src={((editingId === p.id ? editImageUrl : null) || p.image_url) ?? ""}
+            className="w-full h-full rounded-lg object-cover border border-neutral-200"
+        />
+    ) : (
+        <div className="w-full h-full rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center">
+            <span className="text-xs text-neutral-400">Sin foto</span>
+        </div>
+    )}
 
-                        {/* Superposición (Overlay) que solo aparece en modo edición al pasar el mouse */}
-                        {editingId === p.id && (
-                            <>
-                                {/* Capa oscura semitransparente */}
-                                <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition" onClick={triggerEditUpload}>
-                                    {/* Ícono de cámara */}
-                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                </div>
-                                {/* Ocultamos el componente ImageUpload original para que no muestre sus botones feos, pero lo necesitamos para la lógica */}
-                                <div id={`uploader-${p.id}`} className="hidden">
-                                    <ImageUpload value={editImageUrl} onChange={(url) => setEditImageUrl(url)} />
-                                </div>
-                            </>
-                        )}
-                    </div>
-                    {/* --- FIN COLUMNA FOTO MODIFICADA --- */}
+    {editingId === p.id && (
+        <>
+            <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition" onClick={triggerEditUpload}>
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            </div>
+            <div id={`uploader-${p.id}`} className="hidden">
+                <ImageUpload value={editImageUrl} onChange={(url) => setEditImageUrl(url)} />
+            </div>
+        </>
+    )}
+</div>
 
                     <div className="text-center sm:text-left mt-2 sm:mt-0 flex-1 min-w-0">
                         <h3 className="font-bold text-base text-neutral-900 truncate">{p.name}</h3>

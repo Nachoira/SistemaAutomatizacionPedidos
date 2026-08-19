@@ -82,11 +82,6 @@ export async function PATCH(req: Request) {
     const values: unknown[] = [];
     let i = 1;
 
-    if (typeof body.image_url === 'string' || body.image_url === null) {
-  fields.push(`image_url = $${i++}`);
-  values.push(body.image_url);
-}
-
     if (typeof body.name === 'string' && body.name.trim()) {
       fields.push(`name = $${i++}`);
       values.push(body.name.trim());
@@ -107,12 +102,20 @@ export async function PATCH(req: Request) {
       fields.push(`available = $${i++}`);
       values.push(body.available);
     }
+    if (typeof body.image_url === 'string' || body.image_url === null) {
+      fields.push(`image_url = $${i++}`);
+      values.push(body.image_url);
+    }
+
+    // ↑ TODOS los campos opcionales van ANTES de esto.
+    // El id SIEMPRE se agrega al final, después de todos los demás.
 
     if (fields.length === 0) {
       return NextResponse.json({ error: 'No hay campos para actualizar' }, { status: 400 });
     }
 
-    values.push(id);
+    values.push(id); // ← esto tiene que ser lo último que se pushea
+
     const result = await query<ProductRow>(
       `UPDATE products SET ${fields.join(', ')} WHERE id = $${i} RETURNING *`,
       values
