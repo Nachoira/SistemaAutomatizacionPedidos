@@ -212,7 +212,7 @@ export default function ClientMenu({
   return (
     <main style={theme} className={`${display.variable} ${body.variable} min-h-screen bg-[var(--bg)] pb-28 font-[family-name:var(--font-body)] text-[var(--text)]`}>
       <header className="border-b border-[var(--border)] px-5 pb-5 pt-8 text-center">
-        {status === 'ready' && visibleProducts.some((p) => (p.category || 'Menú') === 'Promos') && (
+{status === 'ready' && !categories.includes('TODOS') && visibleProducts.some((p) => (p.category || 'Menú') === 'Promos') && (
   <div className="mx-5 mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-2.5 text-center text-sm font-medium text-[var(--accent)]">
     🔥 Promos válidas solo martes y jueves
   </div>
