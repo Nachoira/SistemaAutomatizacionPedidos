@@ -13,10 +13,27 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nuestro Bar | Pedidos online",
+  title: "La 22 | Pedidos online",
   description: "Pedí tu comida y bebida online, recibila en tu casa.",
+  manifest: "/manifest.json",
+  openGraph: {
+    title: "La 22 | Pedidos online",
+    description: "Pedí tu comida y bebida online, recibila en tu casa.",
+    images: [
+      {
+        url: "/images/la22.png",
+        width: 512,
+        height: 512,
+        alt: "La 22",
+      },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "La 22",
+  },
 };
-
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
