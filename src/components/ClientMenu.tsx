@@ -13,11 +13,13 @@ interface Product {
   category?: string;
   available?: boolean;
   image_url?: string | null;
+  valid_days: number[] | null;
 }
 
 interface CartItem {
   product: Product;
   quantity: number;
+  note: string;
 }
 
 type PaymentMethod = 'efectivo' | 'transferencia';
@@ -39,6 +41,8 @@ export default function ClientMenu({
   const [products, setProducts] = useState<Product[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [cart, setCart] = useState<{ [key: number]: number }>({});
+  const [notes, setNotes] = useState<{ [key: number]: string }>({});
+  const [openNoteId, setOpenNoteId] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [deliveryPrice, setDeliveryPrice] = useState(0);
 
@@ -97,6 +101,12 @@ export default function ClientMenu({
       if (updated <= 0) {
         const copy = { ...prev };
         delete copy[id];
+        setNotes((n) => {
+          const copyN = { ...n };
+          delete copyN[id];
+          return copyN;
+        });
+        if (openNoteId === id) setOpenNoteId(null);
         return copy;
       }
       return { ...prev, [id]: updated };
@@ -104,8 +114,11 @@ export default function ClientMenu({
   };
 
   const cartItems: CartItem[] = useMemo(
-    () => products.filter((p) => cart[p.id]).map((product) => ({ product, quantity: cart[product.id] })),
-    [products, cart]
+    () =>
+      products
+        .filter((p) => cart[p.id])
+        .map((product) => ({ product, quantity: cart[product.id], note: notes[product.id] || '' })),
+    [products, cart, notes]
   );
 
   const itemCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
@@ -123,7 +136,11 @@ export default function ClientMenu({
       return;
     }
 
-    const orderItems = cartItems.map((i) => ({ product_id: i.product.id, quantity: i.quantity }));
+    const orderItems = cartItems.map((i) => ({
+      product_id: i.product.id,
+      quantity: i.quantity,
+      note: i.note.trim() || undefined,
+    }));
 
     setSubmitting(true);
     try {
@@ -150,7 +167,10 @@ export default function ClientMenu({
         `*Pago:* ${payment}`,
         ``,
         `*Detalle:*`,
-        ...cartItems.map((i) => `- ${i.quantity}x ${i.product.name} (${currency.format(i.product.price * i.quantity)})`),
+        ...cartItems.map((i) => {
+          const line = `- ${i.quantity}x ${i.product.name} (${currency.format(i.product.price * i.quantity)})`;
+          return i.note.trim() ? `${line}\n  📝 ${i.note.trim()}` : line;
+        }),
         ``,
         `*Envío:* ${currency.format(deliveryPrice)}`,
         `*Total:* ${currency.format(order.total ?? total)}`,
@@ -163,6 +183,7 @@ export default function ClientMenu({
 
       setToast({ message: 'Pedido enviado. Te esperamos.', type: 'success' });
       setCart({});
+      setNotes({});
       setName('');
       setPhone('');
       setAddress('');
@@ -190,40 +211,16 @@ export default function ClientMenu({
 
   return (
     <main style={theme} className={`${display.variable} ${body.variable} min-h-screen bg-[var(--bg)] pb-28 font-[family-name:var(--font-body)] text-[var(--text)]`}>
-  
-  {/* Header Fijo con efecto de cristal */}
-  <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)]/80 px-5 py-4 backdrop-blur-md">
-    
-    {/* Contenedor horizontal (uno al lado del otro) */}
-    <div className="mx-auto flex max-w-5xl items-center justify-between">
-
-      {/* 1. Etiqueta de "Pedí online" */}
-      <div className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--bg)] px-3 py-1 shadow-sm">
-        <span className="relative flex h-2 w-2">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)] opacity-75"></span>
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent)]"></span>
-        </span>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--accent)]">
-          Pedí online
-        </p>
-      </div>
-
-      {/* 2. Nombre del bar */}
-      <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold tracking-tight">
-        {barName}
-      </h1>
-
-      {/* 3. Costo de envío */}
-      {deliveryPrice > 0 ? (
-        <div className="rounded-md bg-[var(--border)] px-2 py-1">
-          <p className="text-[11px] font-medium text-[var(--text-muted)]">
-            Costo envío: {currency.format(deliveryPrice)}
-          </p>
-        </div>
-      ) : <div />} {/* Espaciador si no hay envío para mantener el centro */}
-
-    </div>
-  </header>
+      <header className="border-b border-[var(--border)] px-5 pb-5 pt-8 text-center">
+        {status === 'ready' && visibleProducts.some((p) => (p.category || 'Menú') === 'Promos') && (
+  <div className="mx-5 mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-2.5 text-center text-sm font-medium text-[var(--accent)]">
+    🔥 Promos válidas solo martes y jueves
+  </div>
+)}
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Pedí online</p>
+        <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight">{barName}</h1>
+        {deliveryPrice > 0 && <p className="mt-1 text-xs text-[var(--text-muted)]">Envío: {currency.format(deliveryPrice)}</p>}
+      </header>
 
       {status === 'ready' && categories.length > 2 && (
         <nav className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-[var(--border)] bg-[var(--bg)]/95 px-5 py-3 backdrop-blur">
@@ -270,31 +267,75 @@ export default function ClientMenu({
 
         {status === 'ready' && products.length > 0 && (
           <div className="space-y-3">
-            {visibleProducts.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 transition-colors hover:border-[var(--accent)]/40">
-                {p.image_url ? (
-                  <img src={p.image_url} alt={p.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
-                ) : (
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-hover)] text-2xl">🍔</div>
-                )}
+            {visibleProducts.map((p) => {
+              const inCart = !!cart[p.id];
+              const noteOpen = openNoteId === p.id;
 
-                <div className="min-w-0 flex-1">
-                  <h3 className="truncate font-[family-name:var(--font-display)] font-bold text-[var(--text)]">{p.name}</h3>
-                  {p.description && <p className="mt-0.5 line-clamp-2 text-sm text-[var(--text-muted)]">{p.description}</p>}
-                  <p className="mt-1.5 font-[family-name:var(--font-display)] font-bold text-[var(--accent)]">{currency.format(p.price)}</p>
-                </div>
+              return (
+                <div key={p.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] transition-colors hover:border-[var(--accent)]/40">
+                  <div className="flex items-center gap-3 p-4">
+                    {p.image_url ? (
+                      <img src={p.image_url} alt={p.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
+                    ) : (
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-hover)] text-2xl">🍔</div>
+                    )}
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <button type="button" aria-label={`Quitar ${p.name}`} onClick={() => updateCart(p.id, -1)} disabled={!cart[p.id]} className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] font-bold text-[var(--text)] transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-30">
-                    −
-                  </button>
-                  <span className="w-5 text-center font-semibold tabular-nums">{cart[p.id] || 0}</span>
-                  <button type="button" aria-label={`Agregar ${p.name}`} onClick={() => updateCart(p.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] font-bold text-[var(--accent-contrast)] transition-colors hover:bg-[var(--accent-hover)]">
-                    +
-                  </button>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-[family-name:var(--font-display)] font-bold text-[var(--text)]">{p.name}</h3>
+                      {p.description && <p className="mt-0.5 line-clamp-2 text-sm text-[var(--text-muted)]">{p.description}</p>}
+                      <p className="mt-1.5 font-[family-name:var(--font-display)] font-bold text-[var(--accent)]">{currency.format(p.price)}</p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button type="button" aria-label={`Quitar ${p.name}`} onClick={() => updateCart(p.id, -1)} disabled={!cart[p.id]} className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] font-bold text-[var(--text)] transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-30">
+                        −
+                      </button>
+                      <span className="w-5 text-center font-semibold tabular-nums">{cart[p.id] || 0}</span>
+                      <button type="button" aria-label={`Agregar ${p.name}`} onClick={() => updateCart(p.id, 1)} className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] font-bold text-[var(--accent-contrast)] transition-colors hover:bg-[var(--accent-hover)]">
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Nota de modificación — solo visible una vez que el producto está en el carrito */}
+                  {inCart && (
+                    <div className="border-t border-[var(--border)] px-4 py-2.5">
+                      {noteOpen ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          maxLength={140}
+                          placeholder="Ej: sin cebolla, con extra queso…"
+                          value={notes[p.id] || ''}
+                          onChange={(e) => setNotes((n) => ({ ...n, [p.id]: e.target.value }))}
+                          onBlur={() => {
+                            if (!notes[p.id]?.trim()) setOpenNoteId(null);
+                          }}
+                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)]/60 outline-none focus:border-[var(--accent)]"
+                        />
+                      ) : notes[p.id]?.trim() ? (
+                        <button
+                          type="button"
+                          onClick={() => setOpenNoteId(p.id)}
+                          className="flex w-full items-start gap-1.5 text-left text-sm text-[var(--text-muted)] hover:text-[var(--text)]"
+                        >
+                          <span className="shrink-0">📝</span>
+                          <span className="italic">{notes[p.id]}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setOpenNoteId(p.id)}
+                          className="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-hover)]"
+                        >
+                          + Agregar alguna modificación
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

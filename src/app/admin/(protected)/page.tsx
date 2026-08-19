@@ -6,6 +6,7 @@ interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  note?: string;
 }
 
 interface DeliveryPerson {
@@ -320,11 +321,16 @@ export default function OrdersAdminPage() {
                 {/* Detalle de items y totales */}
                 <div className="space-y-1.5 rounded-xl border border-[var(--border)]/60 bg-[var(--bg)]/50 p-3.5">
                   {order.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between text-xs">
-                      <span className="font-medium text-[var(--text)]">{item.quantity}x {item.name}</span>
-                      <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
-                    </div>
-                  ))}
+  <div key={idx}>
+    <div className="flex justify-between text-sm">
+      <span className="text-[var(--text)]">{item.quantity}x {item.name}</span>
+      <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
+    </div>
+    {item.note && (
+      <p className="text-xs italic text-[var(--accent)]">📝 {item.note}</p>
+    )}
+  </div>
+))}
                   <div className="flex justify-between text-xs text-[var(--text-muted)] pt-1">
                     <span>Envío</span>
                     <span>{currency.format(order.delivery_price || 0)}</span>
