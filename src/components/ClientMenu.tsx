@@ -35,7 +35,7 @@ const TRANSFER_ALIAS = process.env.NEXT_PUBLIC_TRANSFER_ALIAS || '';
 const TRANSFER_HOLDER = process.env.NEXT_PUBLIC_TRANSFER_HOLDER || '';
 
 export default function ClientMenu({
-  barName = process.env.NEXT_PUBLIC_BAR_NAME || 'La 22',
+  barName = process.env.NEXT_PUBLIC_BAR_NAME || 'El 22',
   whatsappNumber = process.env.NEXT_PUBLIC_BAR_WHATSAPP || '',
 }: ClientMenuProps = {}) {
   const [products, setProducts] = useState<Product[]>([]);
