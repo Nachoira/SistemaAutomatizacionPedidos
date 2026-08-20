@@ -271,9 +271,10 @@ export default function ClientMenu({
               const inCart = !!cart[p.id];
               const noteOpen = openNoteId === p.id;
 
-              return (
-                <div key={p.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] transition-colors hover:border-[var(--accent)]/40">
-                  <div className="flex items-center gap-3 p-4">
+              return(
+ 
+              <div key={p.id} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] transition-colors hover:border-[var(--accent)]/40">
+                  <div className="flex items-start gap-3 p-4">
                     {p.image_url ? (
                       <img src={p.image_url} alt={p.name} className="h-16 w-16 shrink-0 rounded-xl object-cover" />
                     ) : (
@@ -281,11 +282,10 @@ export default function ClientMenu({
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-[family-name:var(--font-display)] font-bold text-[var(--text)]">{p.name}</h3>
-                      {p.description && <p className="mt-0.5 line-clamp-2 text-sm text-[var(--text-muted)]">{p.description}</p>}
+                      <h3 className="font-[family-name:var(--font-display)] font-bold text-[var(--text)] leading-snug">{p.name}</h3>
+                      {p.description && <p className="mt-0.5 text-sm text-[var(--text-muted)] leading-relaxed">{p.description}</p>}
                       <p className="mt-1.5 font-[family-name:var(--font-display)] font-bold text-[var(--accent)]">{currency.format(p.price)}</p>
                     </div>
-
                     <div className="flex shrink-0 items-center gap-2">
                       <button type="button" aria-label={`Quitar ${p.name}`} onClick={() => updateCart(p.id, -1)} disabled={!cart[p.id]} className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--border)] font-bold text-[var(--text)] transition-colors hover:bg-[var(--surface-hover)] disabled:opacity-30">
                         −
