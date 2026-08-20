@@ -212,11 +212,11 @@ export default function ClientMenu({
   return (
     <main style={theme} className={`${display.variable} ${body.variable} min-h-screen bg-[var(--bg)] pb-28 font-[family-name:var(--font-body)] text-[var(--text)]`}>
       <header className="border-b border-[var(--border)] px-5 pb-5 pt-8 text-center">
-{status === 'ready' && !categories.includes('TODOS') && visibleProducts.some((p) => (p.category || 'Menú') === 'Promos') && (
+{status === 'ready' && activeCategory === 'Promos' && (
   <div className="mx-5 mt-4 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-2.5 text-center text-sm font-medium text-[var(--accent)]">
     🔥 Promos válidas solo martes y jueves
   </div>
-)}
+)}    
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Pedí online</p>
         <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-extrabold tracking-tight">{barName}</h1>
         {deliveryPrice > 0 && <p className="mt-1 text-xs text-[var(--text-muted)]">Envío: {currency.format(deliveryPrice)}</p>}
