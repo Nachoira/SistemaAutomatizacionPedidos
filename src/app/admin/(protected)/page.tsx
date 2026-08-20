@@ -320,17 +320,32 @@ export default function OrdersAdminPage() {
 
                 {/* Detalle de items y totales */}
                 <div className="space-y-1.5 rounded-xl border border-[var(--border)]/60 bg-[var(--bg)]/50 p-3.5">
+                  <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]/40 mb-1">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Pedido</span>
+                    <button
+                      onClick={() => {
+                        const text = order.items
+                          .map((item) => `${item.quantity}x ${item.name}${item.note ? ` (Nota: ${item.note})` : ''}`)
+                          .join('\n');
+                        navigator.clipboard.writeText(text);
+                      }}
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface-hover)] active:scale-95"
+                    >
+                      📋 Copiar pedido
+                    </button>
+                  </div>
+
                   {order.items.map((item, idx) => (
-  <div key={idx}>
-    <div className="flex justify-between text-sm">
-      <span className="text-[var(--text)]">{item.quantity}x {item.name}</span>
-      <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
-    </div>
-    {item.note && (
-      <p className="text-xs italic text-[var(--accent)]">📝 {item.note}</p>
-    )}
-  </div>
-))}
+                    <div key={idx}>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-[var(--text)]">{item.quantity}x {item.name}</span>
+                        <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
+                      </div>
+                      {item.note && (
+                        <p className="text-xs italic text-[var(--accent)]">📝 {item.note}</p>
+                      )}
+                    </div>
+                  ))}
                   <div className="flex justify-between text-xs text-[var(--text-muted)] pt-1">
                     <span>Envío</span>
                     <span>{currency.format(order.delivery_price || 0)}</span>
@@ -410,4 +425,4 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1 font-[family-name:var(--font-display)] text-lg font-bold tracking-tight text-[var(--text)]">{value}</p>
     </div>
   );
-} 
+}
