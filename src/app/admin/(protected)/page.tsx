@@ -18,11 +18,12 @@ interface Order {
   id: number;
   customer_name: string;
   phone?: string;
-  address?: string;
+  address?: string | null;
   payment_method: string;
   total: number;
   delivery_price: number;
   delivery_person_id: number | null;
+  delivery_type: 'delivery' | 'retira';
   items: OrderItem[];
   status: OrderStatus;
   created_at?: string;
@@ -215,158 +216,139 @@ export default function OrdersAdminPage() {
   ];
 
   return (
-   <div className="space-y-6">
-      {/* Cabecera Principal */}
-      <div className="space-y-1">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold tracking-tight">Pedidos</h1>
-        <p className="text-xs text-[var(--text-muted)]">
-          {lastSync ? `Actualizado ${timeAgo(lastSync.toISOString())}` : 'Sincronizando…'}
-        </p>
-      </div>
+    <div>
+      <h1 className="font-[family-name:var(--font-display)] text-2xl font-extrabold">Pedidos</h1>
+      <p className="mt-1 text-xs text-[var(--text-muted)]">
+        {lastSync ? `Actualizado ${timeAgo(lastSync.toISOString())}` : 'Sincronizando…'}
+      </p>
 
-      {/* Tarjetas de Métricas */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MetricCard label="Pedidos totales" value={stats ? String(stats.totalOrders) : '—'} />
         <MetricCard label="Facturado total" value={stats ? currency.format(stats.totalRevenue) : '—'} />
         <MetricCard label="Pedidos hoy" value={stats ? String(stats.ordersToday) : '—'} />
         <MetricCard label="Facturado hoy" value={stats ? currency.format(stats.revenueToday) : '—'} />
       </div>
 
-      {/* Controles: Filtros y Buscador agrupados prolijamente */}
-      <div className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)]/40 p-4 backdrop-blur-sm">
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setFilter(t.key)}
-              className={`rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all ${
-                filter === t.key
-                  ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)] shadow-sm'
-                  : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
-              }`}
-            >
-              {t.label}
-              {counts[t.key] ? ` (${counts[t.key]})` : ''}
-            </button>
-          ))}
-        </div>
-
-        <input
-          type="text"
-          placeholder="Buscar por cliente…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full max-w-sm rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-xs outline-none placeholder:text-[var(--text-muted)]/60 focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]"
-        />
+      <div className="mt-6 flex flex-wrap gap-2">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setFilter(t.key)}
+            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              filter === t.key
+                ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
+                : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
+            }`}
+          >
+            {t.label}
+            {counts[t.key] ? ` (${counts[t.key]})` : ''}
+          </button>
+        ))}
       </div>
+
+      <input
+        type="text"
+        placeholder="Buscar por cliente…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="mt-4 mb-6 w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5 text-sm outline-none placeholder:text-[var(--text-muted)]/60 focus:border-[var(--accent)]"
+      />
 
       {status === 'loading' && (
         <div className="space-y-3">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-2xl border border-[var(--border)] bg-[var(--surface)]" />
+            <div key={i} className="h-40 animate-pulse rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
           ))}
         </div>
       )}
 
       {status === 'error' && (
-        <div className="rounded-2xl border border-[var(--danger)]/40 bg-[var(--surface)] p-8 text-center shadow-sm">
-          <p className="font-semibold text-sm">No se pudieron cargar los pedidos.</p>
-          <button onClick={fetchAll} className="mt-3 rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-semibold hover:bg-[var(--surface-hover)]">
+        <div className="rounded-xl border border-[var(--danger)]/40 bg-[var(--surface)] p-6 text-center">
+          <p className="font-semibold">No se pudieron cargar los pedidos.</p>
+          <button onClick={fetchAll} className="mt-3 rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold hover:bg-[var(--surface-hover)]">
             Reintentar
           </button>
         </div>
       )}
 
       {status === 'ready' && visibleOrders.length === 0 && (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-10 text-center text-xs text-[var(--text-muted)] shadow-sm">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-muted)]">
           No hay pedidos {filter !== 'TODOS' ? `en "${tabs.find((t) => t.key === filter)?.label}"` : 'todavía'}.
         </div>
       )}
 
       {status === 'ready' && visibleOrders.length > 0 && (
-        <div className="grid gap-3.5">
+        <div className="grid gap-3">
           {visibleOrders.map((order) => {
             const cfg = STATUS_CONFIG[order.status];
             const actions = ACTIONS_BY_STATUS[order.status] || [];
             const isNew = newIds.has(order.id);
             const isBusy = actioningId === order.id;
+            const isDelivery = order.delivery_type !== 'retira';
 
             return (
               <div
                 key={order.id}
-                className={`flex flex-col gap-4 rounded-2xl border bg-[var(--surface)] p-5 shadow-sm transition-all ${
-                  isNew ? 'border-[var(--accent)] ring-1 ring-[var(--accent)]/30' : 'border-[var(--border)] hover:border-[var(--accent)]/40'
+                className={`flex flex-col gap-4 rounded-xl border bg-[var(--surface)] p-4 transition-colors ${
+                  isNew ? 'border-[var(--accent)]' : 'border-[var(--border)]'
                 }`}
               >
-                {/* Cabecera del pedido */}
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cfg.badge}`}>{cfg.label}</span>
-                  <span className="text-xs font-medium text-[var(--text-muted)]">#{order.id}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${cfg.badge}`}>{cfg.label}</span>
+                  <span className="text-xs text-[var(--text-muted)]">#{order.id}</span>
                   {order.created_at && <span className="text-xs text-[var(--text-muted)]">· {timeAgo(order.created_at)}</span>}
                   {isNew && (
-                    <span className="rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-xs font-bold text-[var(--accent-contrast)] shadow-xs">Nuevo</span>
+                    <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-bold text-[var(--accent-contrast)]">Nuevo</span>
                   )}
+                  <span className={`ml-auto rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                    isDelivery ? 'border-[var(--blue)]/40 text-[var(--blue)]' : 'border-[var(--success)]/40 text-[var(--success)]'
+                  }`}>
+                    {isDelivery ? '🛵 Delivery' : '🏠 Retira en local'}
+                  </span>
                 </div>
 
-                {/* Datos del cliente */}
-                <div className="space-y-0.5">
-                  <h3 className="font-[family-name:var(--font-display)] text-base font-bold text-[var(--text)]">{order.customer_name}</h3>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Tel: <span className="font-medium text-[var(--text)]">{order.phone || 'no especificado'}</span>
+                <div>
+                  <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">{order.customer_name}</h3>
+                  <p className="mt-0.5 text-sm text-[var(--text-muted)]">
+                    Tel: <span className="text-[var(--text)]">{order.phone || 'no especificado'}</span>
                   </p>
-                  {order.address && <p className="text-xs text-[var(--text-muted)]">{order.address}</p>}
-                  <p className="text-xs text-[var(--text-muted)]">{order.payment_method}</p>
+                  {isDelivery && order.address && <p className="text-sm text-[var(--text-muted)]">{order.address}</p>}
+                  <p className="text-sm text-[var(--text-muted)]">{order.payment_method}</p>
                 </div>
 
-                {/* Detalle de items y totales */}
-                <div className="space-y-1.5 rounded-xl border border-[var(--border)]/60 bg-[var(--bg)]/50 p-3.5">
-                  <div className="flex items-center justify-between pb-1 border-b border-[var(--border)]/40 mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Pedido</span>
-                    <button
-                      onClick={() => {
-                        const text = order.items
-                          .map((item) => `${item.quantity}x ${item.name}${item.note ? ` (Nota: ${item.note})` : ''}`)
-                          .join('\n');
-                        navigator.clipboard.writeText(text);
-                      }}
-                      className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface-hover)] active:scale-95"
-                    >
-                      📋 Copiar pedido
-                    </button>
-                  </div>
-
+                <div className="space-y-1 border-t border-[var(--border)] pt-3">
                   {order.items.map((item, idx) => (
                     <div key={idx}>
                       <div className="flex justify-between text-sm">
                         <span className="text-[var(--text)]">{item.quantity}x {item.name}</span>
                         <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
                       </div>
-                      {item.note && (
-                        <p className="text-xs italic text-[var(--accent)]">📝 {item.note}</p>
-                      )}
+                      {item.note && <p className="text-xs italic text-[var(--accent)]">📝 {item.note}</p>}
                     </div>
                   ))}
-                  <div className="flex justify-between text-xs text-[var(--text-muted)] pt-1">
-                    <span>Envío</span>
-                    <span>{currency.format(order.delivery_price || 0)}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-[var(--border)] pt-2 text-xs font-bold">
-                    <span className="text-[var(--text)]">Total</span>
+                  {isDelivery && (
+                    <div className="flex justify-between text-sm text-[var(--text-muted)]">
+                      <span>Envío</span>
+                      <span>{currency.format(order.delivery_price || 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between border-t border-[var(--border)] pt-2 font-semibold">
+                    <span>Total</span>
                     <span className="text-[var(--accent)]">{currency.format(order.total)}</span>
                   </div>
                 </div>
 
-                {/* Asignación de delivery */}
-                {(order.status === 'TOMADO' || order.status === 'EN_CAMINO') && (
+                {/* Asignación de delivery — solo aplica si es delivery y ya fue tomado */}
+                {isDelivery && (order.status === 'TOMADO' || order.status === 'EN_CAMINO') && (
                   <div className="border-t border-[var(--border)] pt-3">
-                    <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                       Delivery asignado
                     </label>
                     <select
                       value={order.delivery_person_id ?? ''}
                       onChange={(e) => assignDelivery(order, e.target.value ? Number(e.target.value) : null)}
                       disabled={isBusy}
-                      className="w-full max-w-xs rounded-xl border border-[var(--border)] bg-[var(--bg)] px-3 py-2 text-xs outline-none focus:border-[var(--accent)]"
+                      className="w-full max-w-xs rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-sm outline-none focus:border-[var(--accent)]"
                     >
                       <option value="">Sin asignar</option>
                       {deliveryPeople.map((d) => (
@@ -376,7 +358,6 @@ export default function OrdersAdminPage() {
                   </div>
                 )}
 
-                {/* Acciones */}
                 <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
                   {actions.length === 0 && <span className="text-xs text-[var(--text-muted)]">Sin acciones disponibles</span>}
                   {actions.map((action) => (
@@ -384,7 +365,7 @@ export default function OrdersAdminPage() {
                       key={action.next}
                       onClick={() => handleActionClick(order, action)}
                       disabled={isBusy}
-                      className={`rounded-xl px-3.5 py-2 text-xs font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50 shadow-xs ${action.style}`}
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${action.style}`}
                     >
                       {isBusy ? 'Actualizando…' : action.label}
                     </button>
@@ -397,17 +378,17 @@ export default function OrdersAdminPage() {
       )}
 
       {confirmAction && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/50 px-5 backdrop-blur-xs">
-          <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl space-y-3">
-            <h3 className="font-[family-name:var(--font-display)] text-base font-bold">¿Rechazar el pedido #{confirmAction.order.id}?</h3>
-            <p className="text-xs text-[var(--text-muted)] leading-relaxed">
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 px-5">
+          <div className="w-full max-w-sm rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+            <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">¿Rechazar el pedido #{confirmAction.order.id}?</h3>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Se le va a enviar un WhatsApp a {confirmAction.order.customer_name} avisándole. No se puede deshacer.
             </p>
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={() => setConfirmAction(null)} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs font-semibold hover:bg-[var(--surface-hover)]">
+            <div className="mt-4 flex justify-end gap-2">
+              <button onClick={() => setConfirmAction(null)} className="rounded-lg border border-[var(--border)] px-3.5 py-1.5 text-sm font-semibold hover:bg-[var(--surface-hover)]">
                 Cancelar
               </button>
-              <button onClick={() => runAction(confirmAction.order, confirmAction.action)} className="rounded-xl bg-[var(--danger)] px-4 py-2 text-xs font-semibold text-white shadow-xs hover:opacity-90">
+              <button onClick={() => runAction(confirmAction.order, confirmAction.action)} className="rounded-lg bg-[var(--danger)] px-3.5 py-1.5 text-sm font-semibold text-white hover:opacity-90">
                 Sí, rechazar
               </button>
             </div>
@@ -420,9 +401,9 @@ export default function OrdersAdminPage() {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-      <p className="text-[11px] font-medium text-[var(--text-muted)]">{label}</p>
-      <p className="mt-1 font-[family-name:var(--font-display)] text-lg font-bold tracking-tight text-[var(--text)]">{value}</p>
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+      <p className="text-xs text-[var(--text-muted)]">{label}</p>
+      <p className="mt-1 font-[family-name:var(--font-display)] text-xl font-bold">{value}</p>
     </div>
   );
 }

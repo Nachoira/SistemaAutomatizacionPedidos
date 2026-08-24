@@ -8,9 +8,13 @@ type OrderStatus = (typeof VALID_STATUSES)[number];
 const VALID_PAYMENT_METHODS = ['efectivo', 'transferencia'] as const;
 type PaymentMethod = (typeof VALID_PAYMENT_METHODS)[number];
 
+const VALID_DELIVERY_TYPES = ['delivery', 'retira'] as const;
+type DeliveryType = (typeof VALID_DELIVERY_TYPES)[number];
+
 interface IncomingItem {
   product_id: number;
   quantity: number;
+  note?: string;
 }
 
 interface ProductRow {
@@ -22,7 +26,7 @@ interface ProductRow {
 interface OrderRow {
   id: number;
   customer_name: string;
-  address: string;
+  address: string | null;
   phone: string;
   payment_method: string;
   total: string;
@@ -30,6 +34,7 @@ interface OrderRow {
   items: unknown;
   delivery_price: string;
   delivery_person_id: number | null;
+  delivery_type: DeliveryType;
   created_at: string;
   updated_at: string;
 }
@@ -42,7 +47,12 @@ function isValidPaymentMethod(value: unknown): value is PaymentMethod {
   return typeof value === 'string' && (VALID_PAYMENT_METHODS as readonly string[]).includes(value);
 }
 
+function isValidDeliveryType(value: unknown): value is DeliveryType {
+  return typeof value === 'string' && (VALID_DELIVERY_TYPES as readonly string[]).includes(value);
+}
+
 // --- GET -------------------------------------------------------------
+// Solo el admin ve la lista de pedidos.
 export async function GET(req: Request) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -65,14 +75,16 @@ export async function GET(req: Request) {
 }
 
 // --- POST --------------------------------------------------------------
+// Público — lo llama el cliente desde el menú. Crea el pedido y, en la
+// misma transacción, da de alta o actualiza el registro del cliente
+// (por teléfono).
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { customer_name, address, phone, payment_method, items } = body;
+    const { customer_name, address, phone, payment_method, items, delivery_type } = body;
 
     if (
       typeof customer_name !== 'string' || !customer_name.trim() ||
-      typeof address !== 'string' || !address.trim() ||
       typeof phone !== 'string' || !phone.trim()
     ) {
       return NextResponse.json({ error: 'Faltan datos del cliente' }, { status: 400 });
@@ -80,6 +92,12 @@ export async function POST(req: Request) {
 
     if (!isValidPaymentMethod(payment_method)) {
       return NextResponse.json({ error: 'Método de pago inválido' }, { status: 400 });
+    }
+
+    const deliveryType: DeliveryType = isValidDeliveryType(delivery_type) ? delivery_type : 'delivery';
+
+    if (deliveryType === 'delivery' && (typeof address !== 'string' || !address.trim())) {
+      return NextResponse.json({ error: 'Falta la dirección de envío' }, { status: 400 });
     }
 
     if (!Array.isArray(items) || items.length === 0) {
@@ -90,6 +108,9 @@ export async function POST(req: Request) {
     const ids = incomingItems.map((i) => i.product_id);
     if (ids.some((id) => typeof id !== 'number')) {
       return NextResponse.json({ error: 'Productos inválidos' }, { status: 400 });
+    }
+    if (incomingItems.some((i) => i.note !== undefined && (typeof i.note !== 'string' || i.note.length > 140))) {
+      return NextResponse.json({ error: 'Nota de producto inválida' }, { status: 400 });
     }
 
     const productsResult = await query<ProductRow>(
@@ -107,24 +128,29 @@ export async function POST(req: Request) {
 
     const resolvedItems = incomingItems.map((i) => {
       const product = priceById.get(i.product_id)!;
-      return { name: product.name, quantity: i.quantity, price: product.price };
+      return {
+        name: product.name,
+        quantity: i.quantity,
+        price: product.price,
+        note: i.note?.trim() || undefined,
+      };
     });
 
     const itemsTotal = resolvedItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
     const settingsResult = await query<{ delivery_price: string }>('SELECT delivery_price FROM settings LIMIT 1');
-    const deliveryPrice = Number(settingsResult.rows[0]?.delivery_price || 0);
+    const deliveryPrice = deliveryType === 'retira' ? 0 : Number(settingsResult.rows[0]?.delivery_price || 0);
     const total = itemsTotal + deliveryPrice;
 
     const cleanName = customer_name.trim();
-    const cleanAddress = address.trim();
+    const cleanAddress = deliveryType === 'delivery' ? address.trim() : null;
     const cleanPhone = phone.trim();
 
     const order = await transaction(async (client) => {
       const orderResult = await client.query<OrderRow>(
-        `INSERT INTO orders (customer_name, address, phone, payment_method, total, items, status, delivery_price)
-         VALUES ($1, $2, $3, $4, $5, $6, 'PENDIENTE', $7) RETURNING *`,
-        [cleanName, cleanAddress, cleanPhone, payment_method, total, JSON.stringify(resolvedItems), deliveryPrice]
+        `INSERT INTO orders (customer_name, address, phone, payment_method, total, items, status, delivery_price, delivery_type)
+         VALUES ($1, $2, $3, $4, $5, $6, 'PENDIENTE', $7, $8) RETURNING *`,
+        [cleanName, cleanAddress, cleanPhone, payment_method, total, JSON.stringify(resolvedItems), deliveryPrice, deliveryType]
       );
 
       await client.query(
@@ -132,7 +158,7 @@ export async function POST(req: Request) {
          VALUES ($1, $2, $3, 1, $4, CURRENT_TIMESTAMP)
          ON CONFLICT (phone) DO UPDATE SET
            name = EXCLUDED.name,
-           address = EXCLUDED.address,
+           address = COALESCE(EXCLUDED.address, customers.address),
            total_orders = customers.total_orders + 1,
            total_spent = customers.total_spent + EXCLUDED.total_spent,
            last_order_at = CURRENT_TIMESTAMP`,
@@ -150,6 +176,7 @@ export async function POST(req: Request) {
 }
 
 // --- PATCH ---------------------------------------------------------------
+// Solo el admin cambia estados o asigna delivery.
 export async function PATCH(req: Request) {
   if (!(await isAdminAuthenticated())) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });

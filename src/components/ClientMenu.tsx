@@ -45,6 +45,7 @@ export default function ClientMenu({
   const [openNoteId, setOpenNoteId] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todos');
   const [deliveryPrice, setDeliveryPrice] = useState(0);
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'retira'>('delivery');
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -123,18 +124,17 @@ export default function ClientMenu({
 
   const itemCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
   const subtotal = cartItems.reduce((acc, i) => acc + i.quantity * i.product.price, 0);
-  const total = subtotal + (subtotal > 0 ? deliveryPrice : 0);
-
+const total = subtotal + (subtotal > 0 && deliveryType === 'delivery' ? deliveryPrice : 0);
   const scrollToForm = () => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
 
-    if (!name.trim() || !phone.trim() || !address.trim() || cartItems.length === 0) {
-      setToast({ message: 'Completá tus datos y elegí al menos un producto.', type: 'error' });
-      return;
-    }
+    if (!name.trim() || !phone.trim() || (deliveryType === 'delivery' && !address.trim()) || cartItems.length === 0) {
+  setToast({ message: 'Completá tus datos y elegí al menos un producto.', type: 'error' });
+  return;
+}
 
     const orderItems = cartItems.map((i) => ({
       product_id: i.product.id,
@@ -148,36 +148,36 @@ export default function ClientMenu({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customer_name: name,
-          phone,
-          address,
-          payment_method: payment,
-          items: orderItems,
-        }),
+  customer_name: name,
+  phone,
+  address: deliveryType === 'delivery' ? address : null,
+  payment_method: payment,
+  delivery_type: deliveryType,
+  items: orderItems,
+}),
       });
 
       if (!res.ok) throw new Error('Error al enviar el pedido');
       const order = await res.json();
-
-      const lines = [
-        `*NUEVO PEDIDO*`,
-        `*Cliente:* ${name}`,
-        `*Teléfono:* ${phone}`,
-        `*Dirección:* ${address}`,
-        `*Pago:* ${payment}`,
-        ``,
-        `*Detalle:*`,
-        ...cartItems.map((i) => {
-          const line = `- ${i.quantity}x ${i.product.name} (${currency.format(i.product.price * i.quantity)})`;
-          return i.note.trim() ? `${line}\n  📝 ${i.note.trim()}` : line;
-        }),
-        ``,
-        `*Envío:* ${currency.format(deliveryPrice)}`,
-        `*Total:* ${currency.format(order.total ?? total)}`,
-        ...(payment === 'transferencia' && TRANSFER_ALIAS
-          ? ['', `*Transferir a:* ${TRANSFER_ALIAS}${TRANSFER_HOLDER ? ` (${TRANSFER_HOLDER})` : ''}`, `*Por favor, mandá la captura del comprobante junto con este mensaje.*`]
-          : []),
-      ];
+const lines = [
+  `*NUEVO PEDIDO*`,
+  `*Cliente:* ${name}`,
+  `*Teléfono:* ${phone}`,
+  deliveryType === 'delivery' ? `*Dirección:* ${address}` : `*Retira en el local*`,
+  `*Pago:* ${payment}`,
+  ``,
+  `*Detalle:*`,
+  ...cartItems.map((i) => {
+    const line = `- ${i.quantity}x ${i.product.name} (${currency.format(i.product.price * i.quantity)})`;
+    return i.note.trim() ? `${line}\n  📝 ${i.note.trim()}` : line;
+  }),
+  ``,
+  ...(deliveryType === 'delivery' ? [`*Envío:* ${currency.format(deliveryPrice)}`] : []),
+  `*Total:* ${currency.format(order.total ?? total)}`,
+  ...(payment === 'transferencia' && TRANSFER_ALIAS
+    ? ['', `*Transferir a:* ${TRANSFER_ALIAS}${TRANSFER_HOLDER ? ` (${TRANSFER_HOLDER})` : ''}`, `*Por favor, mandá la captura del comprobante junto con este mensaje.*`]
+    : []),
+];
 
       window.open(`https://wa.me/${whatsappNumber}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank');
 
@@ -349,9 +349,39 @@ export default function ClientMenu({
             <Field label="WhatsApp de contacto">
               <input type="tel" placeholder="Ej: 3865575938" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} required />
             </Field>
-            <Field label="Dirección de envío">
-              <input type="text" placeholder="Calle y número" value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} required />
-            </Field>
+            <Field label="¿Cómo lo recibís?">
+  <div className="grid grid-cols-2 gap-2">
+    <button
+      type="button"
+      onClick={() => setDeliveryType('delivery')}
+      className={`rounded-lg border py-2.5 text-sm font-semibold transition-colors ${
+        deliveryType === 'delivery'
+          ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
+          : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]'
+      }`}
+    >
+      🛵 Delivery
+    </button>
+    <button
+      type="button"
+      onClick={() => setDeliveryType('retira')}
+      className={`rounded-lg border py-2.5 text-sm font-semibold transition-colors ${
+        deliveryType === 'retira'
+          ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
+          : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)]'
+      }`}
+    >
+      🏠 Retiro en local
+    </button>
+  </div>
+</Field>
+
+{deliveryType === 'delivery' && (
+  <Field label="Dirección de envío">
+    <input type="text" placeholder="Calle y número" value={address} onChange={(e) => setAddress(e.target.value)} className={inputClass} required />
+  </Field>
+)}
+            
             <Field label="Método de pago">
               <select value={payment} onChange={(e) => setPayment(e.target.value as PaymentMethod)} className={inputClass}>
                 <option value="efectivo">Efectivo</option>
