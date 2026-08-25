@@ -57,17 +57,17 @@ interface ActionDef {
 const ACTIONS_BY_STATUS: Partial<Record<OrderStatus, ActionDef[]>> = {
   PENDIENTE: [
     { next: 'TOMADO', label: 'Tomar pedido', style: 'bg-[var(--blue)] hover:bg-[var(--blue-hover)] text-white',
-      message: (o) => `¡Hola ${o.customer_name}! Tu pedido #${o.id} fue tomado y ya lo estamos preparando.` },
+      message: (o) => `Hola ${o.customer_name}! Tu pedido #${o.id} fue tomado y ya lo estamos preparando.` },
     { next: 'RECHAZADO', label: 'Rechazar', style: 'border border-[var(--danger)]/50 text-[var(--danger)] hover:bg-[var(--danger)]/10', confirm: true,
       message: (o) => `Hola ${o.customer_name}, disculpanos, estamos saturados y no podemos tomar tu pedido #${o.id} en este momento.` },
   ],
   TOMADO: [
     { next: 'EN_CAMINO', label: 'Marcar en camino', style: 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)]',
-      message: (o) => `¡Hola ${o.customer_name}! Tu pedido #${o.id} va en camino hacia tu dirección.` },
+      message: (o) => `Hola ${o.customer_name}! Tu pedido #${o.id} va en camino hacia tu dirección.` },
   ],
   EN_CAMINO: [
     { next: 'ENTREGADO', label: 'Marcar entregado', style: 'bg-[var(--success)] hover:bg-[var(--success-hover)] text-white',
-      message: (o) => `¡Gracias por tu pedido, ${o.customer_name}! Que lo disfrutes 🙌` },
+      message: (o) => `Gracias por tu pedido, ${o.customer_name}! Que lo disfrutes.` },
   ],
 };
 
@@ -300,10 +300,14 @@ export default function OrdersAdminPage() {
                   {isNew && (
                     <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-xs font-bold text-[var(--accent-contrast)]">Nuevo</span>
                   )}
-                  <span className={`ml-auto rounded-full border px-2 py-0.5 text-xs font-semibold ${
-                    isDelivery ? 'border-[var(--blue)]/40 text-[var(--blue)]' : 'border-[var(--success)]/40 text-[var(--success)]'
-                  }`}>
-                    {isDelivery ? '🛵 Delivery' : '🏠 Retira en local'}
+                  <span
+                    className={`ml-auto rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                      isDelivery
+                        ? 'border-[var(--blue)]/40 text-[var(--blue)]'
+                        : 'border-[var(--success)]/40 text-[var(--success)]'
+                    }`}
+                  >
+                    {isDelivery ? 'Delivery' : 'Retira en local'}
                   </span>
                 </div>
 
@@ -313,6 +317,7 @@ export default function OrdersAdminPage() {
                     Tel: <span className="text-[var(--text)]">{order.phone || 'no especificado'}</span>
                   </p>
                   {isDelivery && order.address && <p className="text-sm text-[var(--text-muted)]">{order.address}</p>}
+                  {!isDelivery && <p className="text-sm font-semibold text-[var(--success)]">Retira en el local</p>}
                   <p className="text-sm text-[var(--text-muted)]">{order.payment_method}</p>
                 </div>
 
@@ -323,7 +328,7 @@ export default function OrdersAdminPage() {
                         <span className="text-[var(--text)]">{item.quantity}x {item.name}</span>
                         <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
                       </div>
-                      {item.note && <p className="text-xs italic text-[var(--accent)]">📝 {item.note}</p>}
+                      {item.note && <p className="text-xs italic text-[var(--accent)]">Nota: {item.note}</p>}
                     </div>
                   ))}
                   {isDelivery && (
@@ -338,7 +343,6 @@ export default function OrdersAdminPage() {
                   </div>
                 </div>
 
-                {/* Asignación de delivery — solo aplica si es delivery y ya fue tomado */}
                 {isDelivery && (order.status === 'TOMADO' || order.status === 'EN_CAMINO') && (
                   <div className="border-t border-[var(--border)] pt-3">
                     <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
