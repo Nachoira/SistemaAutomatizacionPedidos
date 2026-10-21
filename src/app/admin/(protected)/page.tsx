@@ -56,13 +56,13 @@ interface ActionDef {
 
 const ACTIONS_BY_STATUS: Partial<Record<OrderStatus, ActionDef[]>> = {
   PENDIENTE: [
-    { next: 'TOMADO', label: 'Tomar pedido', style: 'bg-[var(--blue)] hover:bg-[var(--blue-hover)] text-white',
+    { next: 'TOMADO', label: 'Tomar pedido', style: 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white',
       message: (o) => `Hola ${o.customer_name}! Tu pedido #${o.id} fue tomado y ya lo estamos preparando.` },
     { next: 'RECHAZADO', label: 'Rechazar', style: 'border border-[var(--danger)]/50 text-[var(--danger)] hover:bg-[var(--danger)]/10', confirm: true,
       message: (o) => `Hola ${o.customer_name}, disculpanos, estamos saturados y no podemos tomar tu pedido #${o.id} en este momento.` },
   ],
   TOMADO: [
-    { next: 'EN_CAMINO', label: 'Marcar en camino', style: 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-[var(--accent-contrast)]',
+    { next: 'EN_CAMINO', label: 'Marcar en camino', style: 'bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white',
       message: (o) => `Hola ${o.customer_name}! Tu pedido #${o.id} va en camino hacia tu dirección.` },
   ],
   EN_CAMINO: [
@@ -109,6 +109,7 @@ export default function OrdersAdminPage() {
   const [confirmAction, setConfirmAction] = useState<{ order: Order; action: ActionDef } | null>(null);
   const [newIds, setNewIds] = useState<Set<number>>(new Set());
   const [lastSync, setLastSync] = useState<Date | null>(null);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
 
   const knownIds = useRef<Set<number> | null>(null);
 
@@ -189,6 +190,33 @@ export default function OrdersAdminPage() {
     }
   };
 
+  const copyOrder = async (order: Order) => {
+    const isDel = order.delivery_type !== 'retira';
+    const lines = [
+      `Pedido #${order.id}`,
+      `Cliente: ${order.customer_name}`,
+      `Tel: ${order.phone || 'no especificado'}`,
+      isDel ? `Entrega: Delivery${order.address ? ` - ${order.address}` : ''}` : 'Entrega: Retira en el local',
+      `Pago: ${order.payment_method}`,
+      '',
+      'Detalle:',
+      ...order.items.flatMap((i) => {
+        const line = `- ${i.quantity}x ${i.name} (${currency.format(i.price * i.quantity)})`;
+        return i.note ? [line, `  Nota: ${i.note}`] : [line];
+      }),
+      '',
+      ...(isDel ? [`Envío: ${currency.format(order.delivery_price || 0)}`] : []),
+      `Total: ${currency.format(order.total)}`,
+    ];
+    try {
+      await navigator.clipboard.writeText(lines.join('\n'));
+      setCopiedId(order.id);
+      setTimeout(() => setCopiedId((c) => (c === order.id ? null : c)), 2000);
+    } catch {
+      // Portapapeles no disponible — no es crítico.
+    }
+  };
+
   const counts = useMemo(() => {
     const c: Record<string, number> = { TODOS: orders.length };
     for (const o of orders) c[o.status] = (c[o.status] || 0) + 1;
@@ -222,22 +250,22 @@ export default function OrdersAdminPage() {
         {lastSync ? `Actualizado ${timeAgo(lastSync.toISOString())}` : 'Sincronizando…'}
       </p>
 
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <MetricCard label="Pedidos totales" value={stats ? String(stats.totalOrders) : '—'} />
         <MetricCard label="Facturado total" value={stats ? currency.format(stats.totalRevenue) : '—'} />
         <MetricCard label="Pedidos hoy" value={stats ? String(stats.ordersToday) : '—'} />
         <MetricCard label="Facturado hoy" value={stats ? currency.format(stats.revenueToday) : '—'} />
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => setFilter(t.key)}
-            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
               filter === t.key
                 ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-contrast)]'
-                : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
+                : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--text)]'
             }`}
           >
             {t.label}
@@ -251,13 +279,13 @@ export default function OrdersAdminPage() {
         placeholder="Buscar por cliente…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="mt-4 mb-6 w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5 text-sm outline-none placeholder:text-[var(--text-muted)]/60 focus:border-[var(--accent)]"
+        className="mb-6 mt-4 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5 text-sm outline-none placeholder:text-[var(--text-muted)]/60 focus:border-[var(--accent)] sm:max-w-sm"
       />
 
       {status === 'loading' && (
-        <div className="space-y-3">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="h-40 animate-pulse rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-48 animate-pulse rounded-xl border border-[var(--border)] bg-[var(--surface)]" />
           ))}
         </div>
       )}
@@ -278,7 +306,7 @@ export default function OrdersAdminPage() {
       )}
 
       {status === 'ready' && visibleOrders.length > 0 && (
-        <div className="grid gap-3">
+        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {visibleOrders.map((order) => {
             const cfg = STATUS_CONFIG[order.status];
             const actions = ACTIONS_BY_STATUS[order.status] || [];
@@ -289,7 +317,7 @@ export default function OrdersAdminPage() {
             return (
               <div
                 key={order.id}
-                className={`flex flex-col gap-4 rounded-xl border bg-[var(--surface)] p-4 transition-colors ${
+                className={`flex h-full min-w-0 flex-col gap-4 rounded-xl border bg-[var(--surface)] p-4 transition-colors ${
                   isNew ? 'border-[var(--accent)]' : 'border-[var(--border)]'
                 }`}
               >
@@ -311,7 +339,7 @@ export default function OrdersAdminPage() {
                   </span>
                 </div>
 
-                <div>
+                <div className="min-w-0 break-words">
                   <h3 className="font-[family-name:var(--font-display)] text-lg font-bold">{order.customer_name}</h3>
                   <p className="mt-0.5 text-sm text-[var(--text-muted)]">
                     Tel: <span className="text-[var(--text)]">{order.phone || 'no especificado'}</span>
@@ -324,11 +352,11 @@ export default function OrdersAdminPage() {
                 <div className="space-y-1 border-t border-[var(--border)] pt-3">
                   {order.items.map((item, idx) => (
                     <div key={idx}>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-[var(--text)]">{item.quantity}x {item.name}</span>
-                        <span className="text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
+                      <div className="flex justify-between gap-3 text-sm">
+                        <span className="min-w-0 break-words text-[var(--text)]">{item.quantity}x {item.name}</span>
+                        <span className="shrink-0 text-[var(--text-muted)]">{currency.format(item.price * item.quantity)}</span>
                       </div>
-                      {item.note && <p className="text-xs italic text-[var(--accent)]">Nota: {item.note}</p>}
+                      {item.note && <p className="break-words text-xs italic text-[var(--accent)]">Nota: {item.note}</p>}
                     </div>
                   ))}
                   {isDelivery && (
@@ -352,7 +380,7 @@ export default function OrdersAdminPage() {
                       value={order.delivery_person_id ?? ''}
                       onChange={(e) => assignDelivery(order, e.target.value ? Number(e.target.value) : null)}
                       disabled={isBusy}
-                      className="w-full max-w-xs rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-sm outline-none focus:border-[var(--accent)]"
+                      className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] p-2 text-sm outline-none focus:border-[var(--accent)] sm:max-w-xs"
                     >
                       <option value="">Sin asignar</option>
                       {deliveryPeople.map((d) => (
@@ -362,8 +390,13 @@ export default function OrdersAdminPage() {
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-                  {actions.length === 0 && <span className="text-xs text-[var(--text-muted)]">Sin acciones disponibles</span>}
+                <div className="mt-auto flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
+                  <button
+                    onClick={() => copyOrder(order)}
+                    className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm font-semibold text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text)]"
+                  >
+                    {copiedId === order.id ? 'Copiado' : 'Copiar pedido'}
+                  </button>
                   {actions.map((action) => (
                     <button
                       key={action.next}

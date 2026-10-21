@@ -47,15 +47,15 @@ export default function ClientsPage() {
       )}
 
       {status === 'ready' && customers.length > 0 && (
-        <div className="mt-6 grid gap-3">
+        <div className="mt-6 grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {customers.map((c) => (
-            <div key={c.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <div key={c.id} className="min-w-0 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h3 className="font-[family-name:var(--font-display)] font-bold">{c.name}</h3>
+                <h3 className="break-words font-[family-name:var(--font-display)] font-bold">{c.name}</h3>
                 <span className="font-semibold text-[var(--accent)]">{currency.format(Number(c.total_spent))}</span>
               </div>
               <p className="text-sm text-[var(--text-muted)]">{c.phone}</p>
-              {c.address && <p className="text-sm text-[var(--text-muted)]">{c.address}</p>}
+              {c.address && <p className="break-words text-sm text-[var(--text-muted)]">{c.address}</p>}
               <p className="mt-1 text-xs text-[var(--text-muted)]">
                 {c.total_orders} {c.total_orders === 1 ? 'pedido' : 'pedidos'} · último el{' '}
                 {new Date(c.last_order_at).toLocaleDateString('es-AR')}
