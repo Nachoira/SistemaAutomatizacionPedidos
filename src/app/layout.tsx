@@ -13,15 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "El 22 | Pedidos online",
+  title: "MI BAR| Pedidos online",
   description: "Pedí tu comida y bebida online, recibila en tu casa.",
   manifest: "/manifest.json",
   openGraph: {
-    title: "El 22 | Pedidos online",
+    title: "MI BAR | Pedidos online",
     description: "Pedí tu comida y bebida online, recibila en tu casa.",
     images: [
       {
-        url: "/images/la22.png",
+        url: "/images/LOG.png",
         width: 512,
         height: 512,
         alt: "El 22",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "El 22",
+    title: "MI BAR",
   },
 };
 export default function RootLayout({ children }: LayoutProps<"/">) {
